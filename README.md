@@ -4,6 +4,8 @@
 [![GCP](https://img.shields.io/badge/GCP-Enabled-4285F4?logo=googlecloud)](https://cloud.google.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+![diagram](/Screenshots/Diagram.svg)
+
 ## 📘 Overview
 
 This project sets up VPC peering between two Google Cloud projects using Terraform. VPC peering allows for private **RFC 1918** IP communication between projects across regions without using public IPs or VPNs. This setup is ideal for multi-project architectures, shared service models, and secure microservice-to-microservice communication.
@@ -27,9 +29,41 @@ This project sets up VPC peering between two Google Cloud projects using Terrafo
 
 ## ⚙️ Comment Out VPC Peering for Testing/Partial Deployment
 
-To temporarily disable the VPC peering from Project 2 to Project 1, follow these steps:
+```bash
+Error removing peering tiqs-vpc1-to-tiqs-vpc2 from network tiqs-vpc1:
+googleapi: Error 400: There is a peering operation in progress on the local or peer network.
+Try again later., badRequest
+```
+
+### 🔍 What This Means
+
+This error occurs when attempting to delete or modify a VPC peering connection while **another operation is already in progress** on the same VPC or its peer.
+
+---
+
+### 🛑 Why This Is Important
+
+1. **GCP Enforces Operation Sequencing**  
+   Only one VPC peering operation can be active at a time per network. This ensures:
+   - **Network consistency**
+   - **Correct route propagation**
+   - **Avoidance of conflicting state changes**
+
+2. **Terraform State Consistency**  
+   Terraform relies on accurate state. If a peering deletion fails midway:
+   - It may leave your infrastructure in a **partially destroyed state**
+   - You may need to **retry or manually clean up** the state
+
+3. **Avoiding Data Path Disruption**  
+   Peering affects routing tables. Sequential operations prevent:
+   - Routing conflicts
+   - Intermittent downtime between services in peered networks
+
+---
 
 ### ✅ Step 1: Comment out part of `5-vpc.peering2.tf`
+
+*To temporarily disable the VPC peering from Project 2 to Project 1, follow these steps:*
 
 File path: `5-vpc.peering2.tf`
 
@@ -117,7 +151,7 @@ To deploy the peering configuration:
 
 - **After the initial apply completes:**
   - 🕒 Wait 3 minutes to allow the first VPC peering to fully propagate and be recognized by GCP.
-  - ✏️ Uncomment the `google_compute_network_peering.peering_project2_to_project1` resource block in `5-vpc.peering2.tf`.
+  - ✏️ Uncomment the `google_compute_network_peering.peering_project2_to_project1` and `google_compute_network_peering_routes_config.tiqs-vpc2-to-tiqs-vpc1-routes` resource block in `5-vpc.peering2.tf`.
   - ✏️ Uncomment the corresponding output `peering_project2_to_project1` block in `6-outputs.tf`.
     - Then run:
 
@@ -125,11 +159,7 @@ To deploy the peering configuration:
       terraform apply -auto-approve
       ```
 
-  - 📌 *Why the Delay?*
-
-    **Google Cloud Platform** can take a few minutes to fully process and establish a VPC peering connection. If you immediately apply both peering configurations in one pass, the second request may fail with an error such as:
-    - **"Error:** Cannot establish peering — the target network is not ready for peering."
-    - Waiting allows the first peering to be fully recognized, enabling the second peering to be successfully created and establish an **ACTIVE** connection.
+      ![tf-apply](/Screenshots/tf-apply.jpg)]
 
 ---
 
@@ -140,8 +170,12 @@ After a successful second `terraform apply`, verify that both VPC peerings are a
 ### Check from the GCP Console
 
 1. Navigate to **VPC Network > VPC Network Peering**.
+  ![vpc1-with-subnets](/Screenshots/vpc1-with-subnet.jpg)
+  ![vpc2-with-subnets](/Screenshots/vpc2-with-subnet.jpg)
 2. Verify peering entries exist for **both** projects.
 3. Ensure both connections show a **status of ACTIVE**.
+  ![vpc-peering1](/Screenshots/peering1-to-peering2.jpg)
+  ![vpc-peering2](/Screenshots/peering2-to-peering1.jpg)
 4. Check that routes are being exchanged and traffic is flowing if applicable.
 
 ---
@@ -155,6 +189,8 @@ To remove all deployed infrastructure:
 ```bash
 terraform destroy -auto-approve
 ```
+
+![tf-destroy](/Screenshots/tf-destroy.jpg)]
 
 ### Notes
 
