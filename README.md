@@ -27,7 +27,7 @@ This project sets up VPC peering between two Google Cloud projects using Terrafo
 
 ---
 
-## ⚙️ Comment Out VPC Peering for Testing/Partial Deployment
+## ⚙️ Comment Out VPC Peering for Partial Deployment
 
 ```bash
 Error removing peering tiqs-vpc1-to-tiqs-vpc2 from network tiqs-vpc1:
@@ -35,13 +35,13 @@ googleapi: Error 400: There is a peering operation in progress on the local or p
 Try again later., badRequest
 ```
 
-### 🔍 What This Means
+### 🔍 The "What"
 
 This error occurs when attempting to delete or modify a VPC peering connection while **another operation is already in progress** on the same VPC or its peer.
 
 ---
 
-### 🛑 Why This Is Important
+### 🛑 The "Why"
 
 1. **GCP Enforces Operation Sequencing**  
    Only one VPC peering operation can be active at a time per network. This ensures:
@@ -151,7 +151,9 @@ To deploy the peering configuration:
 
 - **After the initial apply completes:**
   - 🕒 Wait 3 minutes to allow the first VPC peering to fully propagate and be recognized by GCP.
+  
   - ✏️ Uncomment the `google_compute_network_peering.peering_project2_to_project1` and `google_compute_network_peering_routes_config.tiqs-vpc2-to-tiqs-vpc1-routes` resource block in `5-vpc.peering2.tf`.
+  
   - ✏️ Uncomment the corresponding output `peering_project2_to_project1` block in `6-outputs.tf`.
     - Then run:
 
@@ -159,7 +161,7 @@ To deploy the peering configuration:
       terraform apply -auto-approve
       ```
 
-      ![tf-apply](/Screenshots/tf-apply.jpg)]
+      ![tf-apply](/Screenshots/tf-apply.jpg)
 
 ---
 
@@ -167,15 +169,31 @@ To deploy the peering configuration:
 
 After a successful second `terraform apply`, verify that both VPC peerings are active:
 
-### Check from the GCP Console
+### 🔎 Step 1: Verify VPCs and Subnet CIDR Blocks
 
-1. Navigate to **VPC Network > VPC Network Peering**.
-  ![vpc1-with-subnets](/Screenshots/vpc1-with-subnet.jpg)
-  ![vpc2-with-subnets](/Screenshots/vpc2-with-subnet.jpg)
-2. Verify peering entries exist for **both** projects.
+Before troubleshooting the peering issue or retrying destroy/apply, ensure that the VPCs and their subnets are correctly configured with valid CIDR ranges.
+
+- Check that:
+  - VPCs exist in each project
+  - Subnet CIDRs are unique and not overlapping
+  - Subnets are deployed and visible under each VPC
+
+📸 **VPC and Subnet Visuals:**
+
+![vpc1-with-subnets](/Screenshots/vpc1-with-subnet.jpg)  
+![vpc2-with-subnets](/Screenshots/vpc2-with-subnet.jpg)
+
+---
+
+### ✅ Step 2: Step-by-Step in GCP Console
+
+1. Navigate to **VPC Network > VPC Network Peering**.  
+2. Verify peering entries exist for **both** projects.  
 3. Ensure both connections show a **status of ACTIVE**.
-  ![vpc-peering1](/Screenshots/peering1-to-peering2.jpg)
-  ![vpc-peering2](/Screenshots/peering2-to-peering1.jpg)
+
+   ![vpc-peering1](/Screenshots/peering1-to-peering2.jpg)  
+   ![vpc-peering2](/Screenshots/peering2-to-peering1.jpg)
+
 4. Check that routes are being exchanged and traffic is flowing if applicable.
 
 ---
@@ -190,7 +208,7 @@ To remove all deployed infrastructure:
 terraform destroy -auto-approve
 ```
 
-![tf-destroy](/Screenshots/tf-destroy.jpg)]
+![tf-destroy](/Screenshots/tf-destroy.jpg)
 
 ### Notes
 
